@@ -49,6 +49,7 @@
 			velocidade: 0,
 			forcaDoPulo: 25.6,
 			qntPulos: 0,
+			pontos: 0,
 
 			atualiza: function() {
 				this.velocidade += this.gravidade;
@@ -68,6 +69,12 @@
 				}
 			},
 
+			resetar: function() {
+				this.velocidade = 0;
+				this.y = 0;
+				this.pontos = 0;
+			},
+
 			desenha: function() {
 				ctx.fillStyle = this.cor;
 				ctx.fillRect(this.x, this.y, this.largura, this.altura);
@@ -82,7 +89,7 @@
 			insere: function() {
 				this._obs.push({
 					x: LARGURA,
-					largura: Math.floor(Math.random() * 21) + 30,
+					largura: 50,//Math.floor(Math.random() * 21) + 30,
 					altura: Math.floor(Math.random() * 120) + 30,
 					cor: this.cores[Math.floor(Math.random() * 5)]
 				});
@@ -106,6 +113,8 @@
 						&& bloco.y + bloco.altura >= chao.y - obs.altura) {
 						estadoAtual = estados.perdeu;
 
+					} else if(obs.x == 0) {
+						bloco.pontos++;
 					} else if(obs.x + obs.largura <= 0) {
 						this._obs.splice(0, 1);
 						tam--;
@@ -135,8 +144,8 @@
 				estadoAtual = estados.jogando;
 			} else if(estadoAtual == estados.perdeu && bloco.y > ALTURA * 2) {
 				estadoAtual = estados.jogar;
-				bloco.velocidade = 0;
-				bloco.y = 0;
+				obstaculos.limpa();
+				bloco.resetar();
 			}
 		}
 
@@ -178,8 +187,6 @@
 
 			if(estadoAtual == estados.jogando) {
 				obstaculos.atualiza();
-			} else if(estadoAtual == estados.perdeu) {
-				obstaculos.limpa();
 			}
 		}
 
@@ -187,12 +194,29 @@
 			ctx.fillStyle = "#50beff";
 			ctx.fillRect(0, 0, LARGURA, ALTURA);
 
+			ctx.fillStyle = "#fff";
+			ctx.font = "50px Arial";
+			ctx.fillText(bloco.pontos, 10, 60);
+
 			if(estadoAtual == estados.jogar) {
 				ctx.fillStyle = "green";
 				ctx.fillRect(LARGURA  / 2 - 50, ALTURA / 2 - 50, 100, 100);
 			} else if(estadoAtual == estados.perdeu) {
 				ctx.fillStyle = "red";
 				ctx.fillRect(LARGURA  / 2 - 50, ALTURA / 2 - 50, 100, 100);
+
+				ctx.save();
+				ctx.translate(LARGURA / 2, ALTURA / 2);
+				ctx.fillStyle = "#fff";
+
+				if(bloco.pontos < 10)
+					ctx.fillText(bloco.pontos, -13, 19);
+				else if(bloco.pontos >= 10 && bloco.pontos , 100)
+					ctx.fillText(bloco.pontos, -26, 19);
+				else
+					ctx.fillText(bloco.pontos, -39, 19);
+				ctx.restore();
+
 			} else if(estadoAtual == estados.jogando) {
 				obstaculos.desenha();				
 			}
