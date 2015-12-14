@@ -19,7 +19,14 @@
 </head>
 <body>
 	<script>
-		var canvas, ctx, LARGURA, ALTURA, frames = 0, maxPulos = 3,
+		var canvas, ctx, LARGURA, ALTURA, frames = 0, maxPulos = 3, velocidade = 6,
+		estadoAtual,
+
+		estados = {
+			jogar: 0,
+			jogando: 1,
+			perdeu: 2
+		},
 		
 		chao = {
 			y: 550,
@@ -47,9 +54,9 @@
 				this.velocidade += this.gravidade;
 				this.y += this.velocidade;
 
-				if(this.y + this.altura >= chao.y) {
-					this.velocidade = 0;
+				if(this.y + this.altura >= chao.y && estadoAtual != estados.perdeu) {
 					this.y = chao.y - this.altura;
+					this.velocidade = 0;
 					this.qntPulos = 0;
 				}
 			},
@@ -70,18 +77,45 @@
 		obstaculos = {
 			_obs: [],
 			cores: ["#ffbc1c", "#ff1c1c", "#ff85e1", "#52a7ff", "#78ff5d"],
+			tempoInsere: 0,
 
 			insere: function() {
 				this._obs.push({
-					x: 200,
+					x: LARGURA,
 					largura: Math.floor(Math.random() * 21) + 30,
 					altura: Math.floor(Math.random() * 120) + 30,
 					cor: this.cores[Math.floor(Math.random() * 5)]
 				});
+
+				this.tempoInsere = 30 + Math.floor(Math.random() * 21);
 			},
 
 			atualiza: function() {
+				if(this.tempoInsere == 0)
+					this.insere();
+				else
+					this.tempoInsere--;
 
+				for(var i = 0, tam = this._obs.length; i < tam; i++) {
+					var obs = this._obs[i];
+
+					obs.x -= velocidade;
+
+					if(bloco.x < obs.x + obs.largura
+						&& bloco.x + bloco.largura >= obs.x
+						&& bloco.y + bloco.altura >= chao.y - obs.altura) {
+						estadoAtual = estados.perdeu;
+
+					} else if(obs.x + obs.largura <= 0) {
+						this._obs.splice(0, 1);
+						tam--;
+						i--;
+					}
+				}
+			},
+
+			limpa: function() {
+				this._obs = [];
 			},
 
 			desenha: function() {
@@ -94,8 +128,16 @@
 		};
 
 		function clique(event) {
-			//alert("clicou");
-			bloco.pula();
+
+			if(estadoAtual == estados.jogando) {
+				bloco.pula();
+			} else if(estadoAtual == estados.jogar) {
+				estadoAtual = estados.jogando;
+			} else if(estadoAtual == estados.perdeu && bloco.y > ALTURA * 2) {
+				estadoAtual = estados.jogar;
+				bloco.velocidade = 0;
+				bloco.y = 0;
+			}
 		}
 
 		function main() {
@@ -117,6 +159,8 @@
 
 			document.addEventListener("mousedown", clique);
 
+			estadoAtual = estados.jogar;
+
 			roda();
 		}
 	
@@ -129,16 +173,31 @@
 
 		function atualiza() {
 			frames++;
+
 			bloco.atualiza();
 
+			if(estadoAtual == estados.jogando) {
+				obstaculos.atualiza();
+			} else if(estadoAtual == estados.perdeu) {
+				obstaculos.limpa();
+			}
 		}
 
 		function desenha() {
 			ctx.fillStyle = "#50beff";
 			ctx.fillRect(0, 0, LARGURA, ALTURA);
 
+			if(estadoAtual == estados.jogar) {
+				ctx.fillStyle = "green";
+				ctx.fillRect(LARGURA  / 2 - 50, ALTURA / 2 - 50, 100, 100);
+			} else if(estadoAtual == estados.perdeu) {
+				ctx.fillStyle = "red";
+				ctx.fillRect(LARGURA  / 2 - 50, ALTURA / 2 - 50, 100, 100);
+			} else if(estadoAtual == estados.jogando) {
+				obstaculos.desenha();				
+			}
+
 			chao.desenha();
-			obstaculos.desenha();
 			bloco.desenha();
 		}
 
