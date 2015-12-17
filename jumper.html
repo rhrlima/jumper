@@ -20,7 +20,7 @@
 <body>
 	<script>
 		var canvas, ctx, LARGURA, ALTURA, frames = 0, maxPulos = 3, velocidade = 6,
-		estadoAtual,
+		estadoAtual, recorde,
 
 		estados = {
 			jogar: 0,
@@ -72,6 +72,12 @@
 			resetar: function() {
 				this.velocidade = 0;
 				this.y = 0;
+
+				if(this.pontos > recorde) {
+					localStorage.setItem("recorde", this.pontos);
+					recorde = this.pontos;
+				}
+
 				this.pontos = 0;
 			},
 
@@ -170,6 +176,10 @@
 
 			estadoAtual = estados.jogar;
 
+			recorde = localStorage.getItem("recorde");
+			if(recorde == null)
+				recorde = 0;
+
 			roda();
 		}
 	
@@ -209,17 +219,17 @@
 				ctx.translate(LARGURA / 2, ALTURA / 2);
 				ctx.fillStyle = "#fff";
 
-				var pontosTam = -ctx.measureText(bloco.pontos).width/2;
+				var tam = -ctx.measureText(bloco.pontos).width/2;
+				ctx.fillText(bloco.pontos, tam, 19);
 
-//				if(bloco.pontos < 10)
-					ctx.fillText(bloco.pontos, pontosTam, 19);
-//				else if(bloco.pontos >= 10 && bloco.pontos < 100)
-//					ctx.fillText(bloco.pontos, -26, 19);
-//				else
-//					ctx.fillText(bloco.pontos, -39, 19);
+				if(bloco.pontos > recorde)
+					ctx.fillText("Novo Recorde!", -163, -60);
+				else {
+					tam = -ctx.measureText("Recorde: "+recorde).width/2;
+					ctx.fillText("Recorde: "+recorde, tam, -60);
+				}
+
 				ctx.restore();
-
-//				ctx.fillText("ola".length, 200, 200);
 
 			} else if(estadoAtual == estados.jogando) {
 				obstaculos.desenha();				
