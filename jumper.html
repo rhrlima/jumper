@@ -5,6 +5,8 @@
 
 	<title>My Game Engine</title>
 
+	<script src="sprite.js"></script>
+
 	<style>
 		canvas {
 			position: absolute;
@@ -19,8 +21,8 @@
 </head>
 <body>
 	<script>
-		var canvas, ctx, LARGURA, ALTURA, frames = 0, maxPulos = 3, velocidade = 6,
-		estadoAtual, recorde,
+		var canvas, ctx, LARGURA, ALTURA, maxPulos = 3, velocidade = 6,
+		estadoAtual, recorde, img, 
 
 		estados = {
 			jogar: 0,
@@ -29,31 +31,41 @@
 		},
 		
 		chao = {
+			x: 0,
 			y: 550,
 			altura: 50,
-			cor: "#ffdf70",
+
+			atualiza: function() {
+				this.x -= velocidade;
+				if(this.x <= -30)
+					this.x = 0;
+			},
 
 			desenha: function() {
-				ctx.fillStyle = this.cor;
-				ctx.fillRect(0, this.y, LARGURA, this.altura);
+				sprite_chao.desenha(this.x, this.y);
+				sprite_chao.desenha(this.x + sprite_chao.largura, this.y);
 			}
 		},
 
 		bloco = {
 			x: 50,
 			y: 0,
-			altura: 50,
-			largura: 50,
-			cor: "#ff4e4e",
+			largura: sprite_personagem.largura,
+			altura: sprite_personagem.altura,
 			gravidade: 1.6,
 			velocidade: 0,
 			forcaDoPulo: 25.6,
 			qntPulos: 0,
 			pontos: 0,
+			rotacao: 0,
+
+			vidas: 3,
+			colidindo: false,
 
 			atualiza: function() {
 				this.velocidade += this.gravidade;
 				this.y += this.velocidade;
+				this.rotacao += Math.PI / 180 * velocidade;
 
 				if(this.y + this.altura >= chao.y && estadoAtual != estados.perdeu) {
 					this.y = chao.y - this.altura;
@@ -78,12 +90,16 @@
 					recorde = this.pontos;
 				}
 
+				this.vidas = 3;
 				this.pontos = 0;
 			},
 
 			desenha: function() {
-				ctx.fillStyle = this.cor;
-				ctx.fillRect(this.x, this.y, this.largura, this.altura);
+				ctx.save();
+				ctx.translate(this.x + this.largura / 2, this.y + this.altura / 2);
+				ctx.rotate(this.rotacao);
+				sprite_personagem.desenha(-this.largura / 2, -this.altura / 2);
+				ctx.restore();
 			}
 		},
 
@@ -95,12 +111,12 @@
 			insere: function() {
 				this._obs.push({
 					x: LARGURA,
-					largura: 50,//Math.floor(Math.random() * 21) + 30,
+					largura: 40,//Math.floor(Math.random() * 21) + 30,
 					altura: Math.floor(Math.random() * 120) + 30,
 					cor: this.cores[Math.floor(Math.random() * 5)]
 				});
 
-				this.tempoInsere = 30 + Math.floor(Math.random() * 21);
+				this.tempoInsere = 40 + Math.floor(Math.random() * 21);
 			},
 
 			atualiza: function() {
@@ -114,10 +130,20 @@
 
 					obs.x -= velocidade;
 
-					if(bloco.x < obs.x + obs.largura
+					if(!bloco.colidindo && bloco.x < obs.x + obs.largura
 						&& bloco.x + bloco.largura >= obs.x
 						&& bloco.y + bloco.altura >= chao.y - obs.altura) {
-						estadoAtual = estados.perdeu;
+						
+						setTimeout(function() {
+							bloco.colidindo = false;
+						}, 500);
+
+						bloco.colidindo = true;
+
+						if(bloco.vidas >= 1)
+							bloco.vidas--;
+						else
+							estadoAtual = estados.perdeu;
 
 					} else if(obs.x == 0) {
 						bloco.pontos++;
@@ -154,6 +180,56 @@
 				bloco.resetar();
 			}
 		}
+	
+		function roda() {
+			atualiza();
+			desenha();
+
+			window.requestAnimationFrame(roda);
+		}
+
+		function atualiza() {
+
+			if(estadoAtual == estados.jogando) {
+				obstaculos.atualiza();
+			}
+
+			chao.atualiza();
+			bloco.atualiza();
+		}
+
+		function desenha() {
+			sprite_cenario.desenha(0, 0);
+
+			ctx.fillStyle = "#fff";
+			ctx.font = "50px Arial";
+			ctx.fillText(bloco.pontos, 30, 68);
+			ctx.fillText(bloco.vidas, 540, 68);
+
+			if(estadoAtual == estados.jogando)
+				obstaculos.desenha();
+
+			chao.desenha();
+			bloco.desenha();
+
+			if(estadoAtual == estados.jogar)
+				sprite_jogar.desenha(LARGURA / 2 - sprite_jogar.largura / 2, ALTURA / 2 - sprite_jogar.altura / 2);
+
+			if(estadoAtual == estados.perdeu) {
+				sprite_perdeu.desenha(LARGURA / 2 - sprite_perdeu.largura / 2, ALTURA / 2 - sprite_perdeu.altura / 2 - sprite_recorde.altura / 2);
+				sprite_recorde.desenha(LARGURA / 2 - sprite_recorde.largura / 2, ALTURA / 2 - sprite_recorde.altura / 2 + sprite_perdeu.altura / 2 - 25);
+
+				ctx.fillStyle = "#fff";
+			
+				if(bloco.pontos > recorde) {
+					sprite_novo.desenha(LARGURA / 2 - 180, ALTURA / 2 + 30);
+					ctx.fillText(bloco.pontos, 420, 470);
+				} else {
+					ctx.fillText(bloco.pontos, 375, 390);
+					ctx.fillText(recorde, 420, 470);
+				}
+			}
+		}
 
 		function main() {
 			ALTURA = window.innerHeight;
@@ -180,63 +256,10 @@
 			if(recorde == null)
 				recorde = 0;
 
+			img = new Image();
+			img.src = "imagens/sheet.png";
+
 			roda();
-		}
-	
-		function roda() {
-			atualiza();
-			desenha();
-
-			window.requestAnimationFrame(roda);
-		}
-
-		function atualiza() {
-			frames++;
-
-			bloco.atualiza();
-
-			if(estadoAtual == estados.jogando) {
-				obstaculos.atualiza();
-			}
-		}
-
-		function desenha() {
-			ctx.fillStyle = "#50beff";
-			ctx.fillRect(0, 0, LARGURA, ALTURA);
-
-			ctx.fillStyle = "#fff";
-			ctx.font = "50px Arial";
-			ctx.fillText(bloco.pontos, 10, 60);
-
-			if(estadoAtual == estados.jogar) {
-				ctx.fillStyle = "green";
-				ctx.fillRect(LARGURA  / 2 - 50, ALTURA / 2 - 50, 100, 100);
-			} else if(estadoAtual == estados.perdeu) {
-				ctx.fillStyle = "red";
-				ctx.fillRect(LARGURA  / 2 - 50, ALTURA / 2 - 50, 100, 100);
-
-				ctx.save();
-				ctx.translate(LARGURA / 2, ALTURA / 2);
-				ctx.fillStyle = "#fff";
-
-				var tam = -ctx.measureText(bloco.pontos).width/2;
-				ctx.fillText(bloco.pontos, tam, 19);
-
-				if(bloco.pontos > recorde)
-					ctx.fillText("Novo Recorde!", -163, -60);
-				else {
-					tam = -ctx.measureText("Recorde: "+recorde).width/2;
-					ctx.fillText("Recorde: "+recorde, tam, -60);
-				}
-
-				ctx.restore();
-
-			} else if(estadoAtual == estados.jogando) {
-				obstaculos.desenha();				
-			}
-
-			chao.desenha();
-			bloco.desenha();
 		}
 
 		main();
